@@ -42,7 +42,8 @@ def transform_data():
     df.to_csv(output_path, index=False)
     
     print(f"Transformation successful! Cleaned data saved to {output_path}")
-    print(df.head())
+    #print(df.head())
+    return df
 
 
 if __name__ == "__main__":

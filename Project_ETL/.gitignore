@@ -1,0 +1,4 @@
+.env
+raw/
+clean/
+__pycache__/
