@@ -26,8 +26,14 @@ def extract_weather():
 if __name__ == "__main__":
     data = extract_weather()
     
-    os.makedirs("raw", exist_ok=True)
-    name = f"raw/weather_{date.today()}.json"
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    raw_dir = os.path.join(script_dir, "raw")
+    os.makedirs(raw_dir, exist_ok=True)
+    name = os.path.join(raw_dir, "weather_latest.json")
+    
+    
+    # os.makedirs("raw", exist_ok=True)
+    # name = f"raw/weather_{date.today()}.json"
     
     with open(name, "w") as f:
         json.dump(data, f)

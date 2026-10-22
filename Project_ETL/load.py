@@ -1,22 +1,14 @@
 import os
 import sys
+from pathlib import Path
 from dotenv import load_dotenv
 import pandas as pd
 from sqlalchemy import create_engine, text
-from transform import transform_data
-from pathlib import Path
-from dotenv import load_dotenv
+import traceback
 
 # Load environment variables from .env file
-# load_dotenv()
-# DATABASE_URL = os.getenv("DATABASE_URL")
-
 load_dotenv(Path(__file__).resolve().parent / ".env")
-
 DATABASE_URL = os.getenv("DATABASE_URL")
-import os
-print("DATABASE_URL set:", os.getenv("DATABASE_URL") is not None)
-print(".env exists:", (Path(__file__).resolve().parent / ".env").exists())
 
 if not DATABASE_URL:
     print("Error: DATABASE_URL not found in environment variables.", file=sys.stderr)
@@ -37,14 +29,18 @@ def get_part_of_day(hour):
 
 def load_data():
     try:
-        # 1. Fetch the transformed DataFrame
-        df = transform_data()
+        # 1. Read transformed data directly from CSV instead of calling transform_data()
+        csv_path = Path(__file__).resolve().parent / "clean" / "weather_clean.csv" 
+        df = pd.read_csv(csv_path, parse_dates=["observed_at"])
         
+        # Ensure obs_date is properly formatted as date if present
+        if "obs_date" in df.columns:
+            df["obs_date"] = pd.to_datetime(df["obs_date"]).dt.date
+
         # 2. Establish SQLAlchemy engine
         engine = create_engine(DATABASE_URL)
         
         # 3. Prepare dimension data
-        # dim_date rows
         dates_df = df[["obs_date"]].drop_duplicates().copy()
         dates_df["date_id"] = pd.to_datetime(dates_df["obs_date"]).dt.strftime("%Y%m%d").astype(int)
         dates_df["year"] = pd.to_datetime(dates_df["obs_date"]).dt.year
@@ -74,7 +70,7 @@ def load_data():
                         ON CONFLICT (date_id) DO NOTHING;
                     """),
                     {
-                        "date_id": row["date_id"],
+                        "date_id": int(row["date_id"]),
                         "full_date": str(row["obs_date"]),
                         "year": int(row["year"]),
                         "month": int(row["month"]),
@@ -122,9 +118,12 @@ def load_data():
         print(f"Successfully loaded/upserted {loaded_count} records into fact_weather.")
 
     except Exception as e:
-        print(f"Error occurred during data loading: {e}", file=sys.stderr)
+        frames = " <- ".join(
+            f"{os.path.basename(f.filename)}:{f.lineno}:{f.name}"
+            for f in traceback.extract_tb(e.__traceback__)
+        )
+        print(f"Error occurred during data loading: {type(e).__name__} at {frames}", file=sys.stderr)
         sys.exit(1)
-
 
 if __name__ == "__main__":
     load_data()

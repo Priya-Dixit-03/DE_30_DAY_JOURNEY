@@ -1,11 +1,25 @@
 import os
 import pandas as pd
-from extract import extract_weather
+import json
+import sys
+# from extract import extract_weather
 
 
 def transform_data():
     # 1. Fetch raw weather data using your extract script
-    raw_data = extract_weather()
+    # raw_data = extract_weather()
+
+
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    raw_path = os.path.join(script_dir, "raw", "weather_latest.json")
+
+    try:
+        with open(raw_path) as f:
+         raw_data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        print("Transform failed: raw file missing or unreadable. Run extract first.")
+        sys.exit(1)
+        
     h = raw_data["hourly"]
     
     # 2. Build the initial DataFrame from the 3 parallel lists
